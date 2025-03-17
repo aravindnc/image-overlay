@@ -8,6 +8,11 @@ const urlsToCache = [
   './assets/icon-512x512.png'
 ];
 
+urlsToCache.push(
+  './webfonts/fa-solid-900.ttf',
+  './webfonts/fa-solid-900.woff2'
+);
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
