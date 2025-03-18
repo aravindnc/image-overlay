@@ -144,6 +144,7 @@
                 Eraser
             </button>
         </div>
+        <a href="group-images.html" class="btn btn-primary">Go to Group Images</a>
     </div>
 </div>
 
@@ -216,6 +217,11 @@
                 img.set({ left: canvas.width / 2, top: canvas.height / 2, originX: 'center', originY: 'center' });
                 canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
                 hideControl('baseImageLabel');
+
+                // Apply blur effect to the base image
+                img.filters.push(new fabric.Image.filters.Blur({ blur: 0.65 }));
+                img.applyFilters();
+                canvas.renderAll();
             });
         };
         reader.readAsDataURL(e.target.files[0]);
@@ -242,6 +248,13 @@
                 canvas.add(img);
                 hideControl('overlayImageLabel');
                 resizeCanvas();
+
+                // Remove blur effect from the base image
+                if (baseImage) {
+                    baseImage.filters = baseImage.filters.filter(filter => !(filter instanceof fabric.Image.filters.Blur));
+                    baseImage.applyFilters();
+                    canvas.renderAll();
+                }
             });
         };
         reader.readAsDataURL(e.target.files[0]);

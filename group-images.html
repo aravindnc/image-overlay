@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Grouping</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            margin: 20px;
+            background-color: black;
+        }
+        .image-group {
+            margin-bottom: 20px;
+        }
+        .image-group img {
+            max-width: 200px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Gallery</h1>
+    <input type="file" id="imageInput" multiple accept="image/*">
+    <div id="imageGroups" class="row"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const db = await openDatabase();
+            const storedGroups = await getAllImageGroups(db);
+            const container = document.getElementById('imageGroups');
+
+            if (Object.keys(storedGroups).length > 0) {
+                document.getElementById('imageInput').style.display = 'none';
+                container.className = 'row masonry';
+                container.innerHTML = '';
+
+                Object.keys(storedGroups).forEach(groupName => {
+                    const group = storedGroups[groupName];
+
+                    if (group.base) {
+                        const colDiv = document.createElement('div');
+                        colDiv.className = 'col-md-3 mb-4 masonry-item';
+
+                        const img = document.createElement('img');
+                        img.src = group.overlay;
+                        img.alt = groupName;
+                        img.className = 'img-fluid rounded';
+                        img.style.cursor = 'pointer';
+
+                        img.addEventListener('click', () => {
+                            localStorage.setItem('selectedGroup', groupName);
+                            window.location.href = 'viewer.html';
+                        });
+
+                        colDiv.appendChild(img);
+                        container.appendChild(colDiv);
+                    }
+                });
+
+                const masonryScript = document.createElement('script');
+                masonryScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/masonry/4.2.2/masonry.pkgd.min.js';
+                masonryScript.onload = () => {
+                    new Masonry(container, {
+                        itemSelector: '.masonry-item',
+                        columnWidth: '.masonry-item',
+                        percentPosition: true
+                    });
+                };
+                document.body.appendChild(masonryScript);
+
+                const clearButton = document.createElement('button');
+                clearButton.textContent = 'Clear Images';
+                clearButton.className = 'btn btn-danger mt-3 mb-3';
+                clearButton.addEventListener('click', async () => {
+                    await clearDatabase(db);
+                    location.reload();
+                });
+
+                container.parentElement.insertBefore(clearButton, container);
+            }
+        });
+
+        document.getElementById('imageInput').addEventListener('change', async (event) => {
+            const files = Array.from(event.target.files);
+            const groups = {};
+            const db = await openDatabase();
+
+            files.forEach(file => {
+                if (!file.name.includes('_nd')) {
+                    const match = file.name.match(/^(.*?)(?:_nd)?\.(\w+)$/);
+                    if (match) {
+                        const baseName = match[1];
+
+                        if (!groups[baseName]) {
+                            groups[baseName] = { base: null, overlay: null };
+                        }
+
+                        groups[baseName].overlay = file;
+                    }
+                }
+            });
+
+            Object.keys(groups).forEach(baseName => {
+                files.forEach(file => {
+                    if (file.name.includes(baseName + '_nd')) {
+                        if (groups[baseName] && groups[baseName].overlay) {
+                            groups[baseName].base = file;
+                        }
+                    }
+                });
+            });
+
+            const container = document.getElementById('imageGroups');
+            container.innerHTML = '';
+
+            Object.keys(groups).forEach(async groupName => {
+                const group = groups[groupName];
+                if (group.base) {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'image-group';
+
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(group.overlay);
+                    img.alt = groupName;
+                    img.style.cursor = 'pointer';
+
+                    const readerBase = new FileReader();
+                    readerBase.onload = async () => {
+                        const baseData = readerBase.result;
+
+                        if (group.overlay) {
+                            const readerOverlay = new FileReader();
+                            readerOverlay.onload = async () => {
+                                const overlayData = readerOverlay.result;
+                                await saveImageGroup(db, groupName, baseData, overlayData);
+                            };
+                            readerOverlay.readAsDataURL(group.overlay);
+                        } else {
+                            await saveImageGroup(db, groupName, baseData, null);
+                        }
+                    };
+                    readerBase.readAsDataURL(group.base);
+
+                    img.addEventListener('click', () => {
+                        localStorage.setItem('selectedGroup', groupName);
+                        window.location.href = 'viewer.html';
+                    });
+
+                    groupDiv.appendChild(img);
+                    container.appendChild(groupDiv);
+                }
+            });
+        });
+
+        async function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('ImageDatabase', 1);
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('imageGroups')) {
+                        db.createObjectStore('imageGroups', { keyPath: 'groupName' });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    resolve(event.target.result);
+                };
+
+                request.onerror = (event) => {
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        async function saveImageGroup(db, groupName, base, overlay) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction('imageGroups', 'readwrite');
+                const store = transaction.objectStore('imageGroups');
+                store.put({ groupName, base, overlay });
+
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (event) => reject(event.target.error);
+            });
+        }
+
+        async function getAllImageGroups(db) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction('imageGroups', 'readonly');
+                const store = transaction.objectStore('imageGroups');
+                const request = store.getAll();
+
+                request.onsuccess = (event) => {
+                    const result = {};
+                    event.target.result.forEach(item => {
+                        result[item.groupName] = { base: item.base, overlay: item.overlay };
+                    });
+                    resolve(result);
+                };
+
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+
+        async function clearDatabase(db) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction('imageGroups', 'readwrite');
+                const store = transaction.objectStore('imageGroups');
+                const request = store.clear();
+
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+    </script>
+</body>
+</html>
