@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Grouping</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/bootstrap.min.css">
     <style>
         body {
-            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-family: monospace;
             margin: 20px;
             background-color: black;
         }
@@ -26,18 +26,24 @@
     <div id="imageGroups" class="row"></div>
 
     <script>
+        let cachedGroups = null; // Cache for image groups
+
         document.addEventListener('DOMContentLoaded', async () => {
             const db = await openDatabase();
-            const storedGroups = await getAllImageGroups(db);
+
+            if (!cachedGroups) {
+                cachedGroups = await getAllImageGroups(db); // Load data into cache
+            }
+
             const container = document.getElementById('imageGroups');
 
-            if (Object.keys(storedGroups).length > 0) {
+            if (Object.keys(cachedGroups).length > 0) {
                 document.getElementById('imageInput').style.display = 'none';
                 container.className = 'row masonry';
                 container.innerHTML = '';
 
-                Object.keys(storedGroups).forEach(groupName => {
-                    const group = storedGroups[groupName];
+                Object.keys(cachedGroups).forEach(groupName => {
+                    const group = cachedGroups[groupName];
 
                     if (group.base) {
                         const colDiv = document.createElement('div');
@@ -60,7 +66,7 @@
                 });
 
                 const masonryScript = document.createElement('script');
-                masonryScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/masonry/4.2.2/masonry.pkgd.min.js';
+                masonryScript.src = 'assets/masonry.pkgd.min.js';
                 masonryScript.onload = () => {
                     new Masonry(container, {
                         itemSelector: '.masonry-item',
@@ -75,10 +81,11 @@
                 clearButton.className = 'btn btn-danger mt-3 mb-3';
                 clearButton.addEventListener('click', async () => {
                     await clearDatabase(db);
+                    cachedGroups = null; // Clear cache
                     location.reload();
                 });
 
-                container.parentElement.insertBefore(clearButton, container);
+                container.parentElement.insertBefore(clearButton, container.nextSibling);
             }
         });
 

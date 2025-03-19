@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./assets/font-awesome.min.css">
     <style>
         html, body {
-            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-family: 'monospace', sans-serif;
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -50,6 +50,33 @@
         .opacity-control label {
             margin-bottom: 10px;
         }
+
+        /* Style all buttons to be big with icons on top and labels below */
+        button, a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            /* font-size: 16px; */
+            text-align: center;
+            background: rgba(255, 255, 255, 0.7);
+            border: none;
+            border-radius: 10px;
+            margin: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover, a:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        button i, a i {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -59,12 +86,22 @@
 </div>
 
 <div class="opacity-control">
-    <input type="range" id="opacity" min="0" max="1" step="0.01" value="0" orient="vertical">
+    <input type="range" id="opacity" min="0" max="1" step="0.1" value="0" orient="vertical">
 </div>
 
 <button id="backButton" class="file-label" style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
-    <i class="fas fa-arrow-left file-icon"></i>
+    <i class="fas fa-history file-icon"></i>
     Back
+</button>
+
+<button id="prevButton" class="file-label" style="position: absolute; top: 10px; left: 80px; z-index: 1000;">
+    <i class="fas fa-arrow-left file-icon"></i>
+    Prev
+</button>
+
+<button id="nextButton" class="file-label" style="position: absolute; top: 10px; left: 150px; z-index: 1000;">
+    <i class="fas fa-arrow-right file-icon"></i>
+    Next
 </button>
 
 <script>
@@ -127,6 +164,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         const db = await openDatabase();
         const selectedGroup = localStorage.getItem('selectedGroup');
+        const allGroups = await getAllGroupNames(db);
 
         if (selectedGroup) {
             const group = await getImageGroup(db, selectedGroup);
@@ -147,11 +185,58 @@
                     canvas.add(overlay);
                     resizeCanvas();
                 });
-            } else {
-                console.error('No group data found in IndexedDB for the selected group.');
             }
-        } else {
-            console.error('No selected group found in localStorage.');
+
+            const currentIndex = allGroups.indexOf(selectedGroup);
+
+            document.getElementById('prevButton').addEventListener('click', async () => {
+                if (currentIndex > 0) {
+                    const prevGroup = allGroups[currentIndex - 1];
+                    localStorage.setItem('selectedGroup', prevGroup);
+                    location.reload();
+                }
+            });
+
+            document.getElementById('nextButton').addEventListener('click', async () => {
+                if (currentIndex < allGroups.length - 1) {
+                    const nextGroup = allGroups[currentIndex + 1];
+                    localStorage.setItem('selectedGroup', nextGroup);
+                    location.reload();
+                }
+            });
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const slider = document.getElementById('opacity');
+        if (slider) {
+            const step = 0.1; // Adjust slider in steps of 0.1
+            let currentValue = parseFloat(slider.value) || 0; // Ensure currentValue is a valid number
+
+            if (event.key === 'ArrowUp') {
+                event.preventDefault(); // Prevent default scrolling behavior
+                currentValue = Math.min(1, currentValue + step); // Increase opacity
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault(); // Prevent default scrolling behavior
+                currentValue = Math.max(0, currentValue - step); // Decrease opacity
+            }
+
+            slider.value = currentValue.toFixed(2);
+            slider.dispatchEvent(new Event('input')); // Trigger the input event to update opacity
+        }
+    });
+    
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+            const prevButton = document.getElementById('prevButton');
+            if (prevButton) {
+                prevButton.click();
+            }
+        } else if (event.key === 'ArrowRight') {
+            const nextButton = document.getElementById('nextButton');
+            if (nextButton) {
+                nextButton.click();
+            }
         }
     });
 
@@ -181,6 +266,20 @@
             const transaction = db.transaction('imageGroups', 'readonly');
             const store = transaction.objectStore('imageGroups');
             const request = store.get(groupName);
+
+            request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    async function getAllGroupNames(db) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('imageGroups', 'readonly');
+            const store = transaction.objectStore('imageGroups');
+            const request = store.getAllKeys();
 
             request.onsuccess = (event) => {
                 resolve(event.target.result);
