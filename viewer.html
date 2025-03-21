@@ -77,6 +77,25 @@
             font-size: 32px;
             margin-bottom: 5px;
         }
+
+        /* Style buttons to be vertical */
+        #backButton, #prevButton, #nextButton {
+            position: absolute;
+            left: 10px;
+            z-index: 1000;
+        }
+
+        #backButton {
+            bottom: 10px;
+        }
+
+        #prevButton {
+            top: 10px;
+        }
+
+        #nextButton {
+            top: 80px;
+        }
     </style>
 </head>
 <body>
@@ -89,17 +108,17 @@
     <input type="range" id="opacity" min="0" max="1" step="0.1" value="0" orient="vertical">
 </div>
 
-<button id="backButton" class="file-label" style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
+<button id="backButton" class="file-label">
     <i class="fas fa-history file-icon"></i>
     Back
 </button>
 
-<button id="prevButton" class="file-label" style="position: absolute; top: 10px; left: 80px; z-index: 1000;">
+<button id="prevButton" class="file-label">
     <i class="fas fa-arrow-left file-icon"></i>
     Prev
 </button>
 
-<button id="nextButton" class="file-label" style="position: absolute; top: 10px; left: 150px; z-index: 1000;">
+<button id="nextButton" class="file-label">
     <i class="fas fa-arrow-right file-icon"></i>
     Next
 </button>
