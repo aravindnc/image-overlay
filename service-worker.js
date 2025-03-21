@@ -26,8 +26,12 @@ self.addEventListener('install', (event) => {
         '/assets/fabric.min.js',
         '/assets/font-awesome.min.css',
         '/assets/masonry.pkgd.min.js',
+        '/assets/rangeslider.css',
+        '/assets/rangeslider.min.js',
         '/assets/icon-192x192.png',
         '/assets/icon-512x512.png',
+        '/assets/screenshot1.png',
+        '/assets/screenshot2.png',
         '/webfonts/fa-solid-900.ttf',
         '/webfonts/fa-solid-900.woff2'
       ]);

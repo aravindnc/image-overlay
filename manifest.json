@@ -1,8 +1,8 @@
 {
-  "name": "Image Overlay with Eraser",
-  "short_name": "ImageOverlay",
-  "description": "An app to overlay images with eraser functionality.",
-  "start_url": "./index.html",
+  "name": "Image Overlay Viewer",
+  "short_name": "ImageViewer",
+  "description": "A PWA for viewing and overlaying images.",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
@@ -30,5 +30,11 @@
       "sizes": "720x1280",
       "type": "image/png"
     }
-  ]
+  ],
+  "scope": "/",
+  "serviceworker": {
+    "src": "service-worker.js",
+    "scope": "/",
+    "type": "module"
+  }
 }
